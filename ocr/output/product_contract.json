@@ -1,0 +1,75 @@
+{
+  "manufacturer_address": "",
+  "commodity_name": "DRecTion",
+  "net_quantity": "",
+  "net_quantity_value_g_ml": null,
+  "quantity_type": "",
+  "mrp": "",
+  "mrp_value": null,
+  "mfg_date": "",
+  "best_before_or_expiry": "",
+  "batch_no": "",
+  "fssai_license_no": "",
+  "consumer_care": "",
+  "is_imported": false,
+  "country_of_origin": "",
+  "buyer_type": "retail",
+  "category": "packaged_food",
+  "detected_language": "en",
+  "pdp_area_cm2": null,
+  "pdp_box": null,
+  "font_heights_mm": {},
+  "is_embossed": false,
+  "letter_width_height_ratios": {},
+  "declaration_boxes": {},
+  "nearest_other_text_distance_mm": {},
+  "body_text_height_mm": null,
+  "contrast_ok": {},
+  "raw_ocr_text": "DRecTion PRODUCT NAME NOREDTION No Dutà adN",
+  "ocr_lines": [
+    "DRecTion",
+    "PRODUCT",
+    "NAME",
+    "NOREDTION",
+    "No Dutà adN"
+  ],
+  "ocr_scores": [
+    0.56504225730896,
+    0.9999779462814331,
+    0.9999379515647888,
+    0.6677160263061523,
+    0.4452979862689972
+  ],
+  "ocr_boxes": [
+    [
+      190,
+      26,
+      216,
+      35
+    ],
+    [
+      92,
+      40,
+      163,
+      69
+    ],
+    [
+      107,
+      53,
+      155,
+      78
+    ],
+    [
+      186,
+      58,
+      216,
+      65
+    ],
+    [
+      112,
+      72,
+      152,
+      89
+    ]
+  ]
+}
