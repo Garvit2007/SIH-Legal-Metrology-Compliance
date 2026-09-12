@@ -1,0 +1,9 @@
+.env
+venv/
+__pycache__/
+<<<<<<< HEAD
+uploads/
+*.pyc
+=======
+.pytest_cache/
+>>>>>>> 85f71584a3767e7a750eda7a3739d57ad654866f
