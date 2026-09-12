@@ -27,6 +27,28 @@ class DeclarationResult(BaseModel):
     bbox: BoundingBox
 
 
+class RuleEngineViolation(BaseModel):
+    rule_id: str
+    rule_ref: str
+    severity: str
+    message: str
+    field: str | None = None
+
+
+class RuleEngineReport(BaseModel):
+    product_id: str
+    rule_version: str
+    out_of_scope: bool
+    scope_reason: str | None = None
+    exempt: bool
+    exempt_reason: str | None = None
+    is_compliant: bool
+    critical_violations: int
+    total_violations: int
+    violations: list[RuleEngineViolation]
+    passed_checks: list[str]
+
+
 class ScanRecord(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     product_name: str
@@ -41,6 +63,7 @@ class ScanRecord(BaseModel):
     violation_count: int
     review_status: Literal["not_required", "pending", "verified"]
     remarks: str = ""
+    rule_engine_report: RuleEngineReport | None = None
 
 
 class ScanCreate(BaseModel):

@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from pymongo import ReturnDocument
 
 from lib.db import db
+from lib.rule_adapter import apply_rule_engine
 from models.compliance import (
     BoundingBox,
     BreakdownPoint,
@@ -160,8 +161,10 @@ async def create_scan(input: ScanCreate) -> ScanRecord:
             raise RuntimeError("Demo scan")
     except Exception:
         declarations = fallback_declarations()
-    status = "non_compliant" if any(item.status == "non_compliant" for item in declarations) else "review" if any(item.status == "review" for item in declarations) else "compliant"
-    record = ScanRecord(product_name=product_name, manufacturer=manufacturer, category=input.category, region=input.region, inspector=input.inspector, status=status, image_url=image_url, declarations=declarations, violation_count=sum(1 for item in declarations if item.status == "non_compliant"), review_status="pending" if status != "compliant" else "not_required")
+    scan_id = str(uuid.uuid4())
+    declarations, engine_report = apply_rule_engine(scan_id, product_name, input.category, declarations)
+    status = "compliant" if engine_report.is_compliant else "non_compliant"
+    record = ScanRecord(id=scan_id, product_name=product_name, manufacturer=manufacturer, category=input.category, region=input.region, inspector=input.inspector, status=status, image_url=image_url, declarations=declarations, violation_count=engine_report.total_violations, review_status="pending" if not engine_report.is_compliant else "not_required", rule_engine_report=engine_report)
     await db.scans.insert_one(record.model_dump())
     return record
 

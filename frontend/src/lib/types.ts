@@ -20,6 +20,28 @@ export interface DeclarationResult {
   bbox: BoundingBox;
 }
 
+export interface RuleEngineViolation {
+  rule_id: string;
+  rule_ref: string;
+  severity: string;
+  message: string;
+  field: string | null;
+}
+
+export interface RuleEngineReport {
+  product_id: string;
+  rule_version: string;
+  out_of_scope: boolean;
+  scope_reason: string | null;
+  exempt: boolean;
+  exempt_reason: string | null;
+  is_compliant: boolean;
+  critical_violations: number;
+  total_violations: number;
+  violations: RuleEngineViolation[];
+  passed_checks: string[];
+}
+
 export interface ScanRecord {
   id: string;
   product_name: string;
@@ -34,6 +56,7 @@ export interface ScanRecord {
   violation_count: number;
   review_status: ReviewStatus;
   remarks: string;
+  rule_engine_report: RuleEngineReport | null;
 }
 
 export interface BreakdownPoint {

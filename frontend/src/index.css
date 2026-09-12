@@ -94,3 +94,7 @@
   html { @apply font-sans; }
   button, label, select, input, textarea { -webkit-tap-highlight-color: transparent; }
 }
+
+[data-testid="declaration-report-button"] {
+  margin-bottom: 6rem;
+}

@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "source": "Legal Metrology (Packaged Commodities) Rules, 2011, GSR 202(E) dated 7 March 2011, as amended (incl. GSR 748(E) dated 24.10.2011 w.e.f. 01.07.2012, and GSR 629(E) dated 23.6.2017)",
+    "rule_version": "2017-amendment",
+    "effective_date": "2017-06-23",
+    "note": "Numeral height tables (Rule 7 Table-I/II) and exemptions (Rule 26) below are transcribed from the official rules text. Re-verify against the current consolidated gazette copy before your final demo -- rules are amended periodically (2017, and again per 2025 DoCA FAQ clarifications)."
+  },
+  "scope_exclusions": [
+    {"id":"SCOPE_BULK_PACKAGE","rule_ref":"Rule 3(a)","check_type":"scope_exclude_if","condition":"net_quantity_value_g_ml > 25000 and category != 'cement_or_fertilizer'","message":"Chapter II retail-sale declaration rules do not apply -- package exceeds 25 kg/25 L (cement/fertilizer bags up to 50kg are the exception)."},
+    {"id":"SCOPE_INSTITUTIONAL","rule_ref":"Rule 3(b)","check_type":"scope_exclude_if","condition":"buyer_type == 'institutional' or buyer_type == 'industrial'","message":"Package is for institutional/industrial consumption -- Chapter II retail declaration rules do not apply."}
+  ],
+  "exemptions": [
+    {"id":"EXEMPT_TINY_PACKAGE","rule_ref":"Rule 26(a)","check_type":"exempt_if","condition":"net_quantity_value_g_ml <= 10","message":"Package net content is 10g/10ml or less -- fully exempt from these rules."},
+    {"id":"EXEMPT_FAST_FOOD","rule_ref":"Rule 26(b)","check_type":"exempt_if","condition":"category == 'restaurant_fast_food'","message":"Fast food packed by a restaurant/hotel is exempt."},
+    {"id":"EXEMPT_DRUG_PRICE_CONTROL","rule_ref":"Rule 26(c)","check_type":"exempt_if","condition":"category == 'drugs_price_control_order'","message":"Scheduled/non-scheduled drug formulations under the Drugs (Price Control) Order, 1995 are exempt from these rules (governed separately)."},
+    {"id":"EXEMPT_BULK_AGRI","rule_ref":"Rule 26(d)","check_type":"exempt_if","condition":"category == 'agricultural_produce' and net_quantity_value_g_ml > 50000","message":"Agricultural farm produce above 50kg is exempt."},
+    {"id":"EXEMPT_NO_MFG_DATE_ITEMS","rule_ref":"Rule 6(1)(g) proviso (A)","check_type":"exempt_field_if","field":"mfg_date","condition":"category == 'bidi_or_incense' or category == 'domestic_lpg_cylinder_psu'","message":"Bidis/incense sticks and PSU-marketed domestic LPG cylinders (14.2kg/5kg) do not require a manufacture-date declaration."},
+    {"id":"EXEMPT_NO_MRP_ITEMS","rule_ref":"Rule 6(1)(g) proviso (C)","check_type":"exempt_field_if","field":"mrp","condition":"category == 'bidi' or category == 'domestic_lpg_cylinder_apm'","message":"Bidis and APM-priced domestic LPG cylinders do not require an MRP declaration on-pack."}
+  ],
+  "mandatory_declarations": [
+    {"id":"MFR_ADDRESS","rule_ref":"Rule 6(1)(a), Rule 10","field":"manufacturer_address","required":true,"check_type":"presence","severity":"critical","message":"Name and complete address of manufacturer/packer/importer is missing."},
+    {"id":"COMMODITY_NAME","rule_ref":"Rule 6(1)(b)","field":"commodity_name","required":true,"check_type":"presence","severity":"critical","message":"Common/generic name of the commodity is missing."},
+    {"id":"NET_QUANTITY","rule_ref":"Rule 6(1)(c), Rule 13","field":"net_quantity","required":true,"check_type":"regex","pattern":"^\\d+(\\.\\d+)?\\s?(g|kg|ml|l|mg|N|U)$","severity":"critical","message":"Net quantity missing or not in a standard SI unit (g/kg/ml/l, or N/U for number)."},
+    {"id":"NET_QUANTITY_NO_VAGUE_WORDS","rule_ref":"Rule 12(6)","field":"net_quantity","required":true,"check_type":"forbidden_words","forbidden":["minimum","not less than","average","about","approximately"],"severity":"major","message":"Net quantity declaration contains a misleading qualifier word (e.g. 'about', 'approximately')."},
+    {"id":"MFG_DATE","rule_ref":"Rule 6(1)(d)","field":"mfg_date","required":true,"check_type":"date_format","formats":["MM/YYYY","MMM YYYY","MM-YYYY"],"severity":"critical","message":"Month and year of manufacture/packing/import is missing or invalid."},
+    {"id":"MRP","rule_ref":"Rule 6(1)(e), Rule 2(m)","field":"mrp","required":true,"check_type":"regex","pattern":"^(₹|Rs\\.?)\\s?\\d+(\\.\\d{1,2})?\\s?\\(?(incl\\.?\\s?of\\s?all\\s?taxes)?\\)?$","case_insensitive":true,"severity":"critical","message":"MRP missing, or not declared as 'MRP Rs.___ inclusive of all taxes'."},
+    {"id":"CONSUMER_CARE","rule_ref":"Rule 6(2)","field":"consumer_care","required":true,"check_type":"presence_with_contact","must_contain_one_of":["phone","email"],"severity":"major","message":"Consumer care details missing phone/email contact."},
+    {"id":"COUNTRY_OF_ORIGIN","rule_ref":"Rule 6(1)(a) explanation / import practice","field":"country_of_origin","required_if":"is_imported == true","check_type":"presence","severity":"critical","message":"Country of origin / importer address missing for an imported product."},
+    {"id":"DIMENSIONS_IF_RELEVANT","rule_ref":"Rule 6(1)(f), Rule 14","field":"dimensions","required_if":"category == 'dimension_relevant_textile'","check_type":"presence","severity":"minor","message":"Dimensions of the commodity (e.g. bedsheets, towels, sarees) are required but missing."}
+  ],
+  "font_and_placement_rules": [
+    {"id":"MIN_LETTER_HEIGHT","rule_ref":"Rule 7(3)","check_type":"min_height_mm","applies_to":"all_declarations_text","normal_min_mm":1.0,"molded_or_embossed_min_mm":2.0,"severity":"major","message":"Declaration letter height is below the 1 mm (2 mm if embossed/molded) minimum."},
+    {"id":"LETTER_WIDTH_RATIO","rule_ref":"Rule 7(3) proviso","check_type":"ratio","min_width_to_height_ratio":0.3333,"exceptions":["1","i","I","l"],"severity":"minor","message":"Letter/numeral width is less than one-third of its height."},
+    {"id":"NUMERAL_HEIGHT_TABLE_I_WEIGHT_VOLUME","rule_ref":"Rule 7(2)(i), Table-I","check_type":"tiered_lookup","quantity_type":"weight_or_volume","applies_to":["mrp","net_quantity"],"lookup_field":"net_quantity_value_g_ml","table":[{"min":0,"max":200,"normal_min_mm":1,"embossed_min_mm":2},{"min":200,"max":500,"normal_min_mm":2,"embossed_min_mm":4},{"min":500,"max":null,"normal_min_mm":4,"embossed_min_mm":6}],"severity":"major","message":"Numeral height for MRP/net quantity does not meet Table-I minimum for its weight/volume band."},
+    {"id":"NUMERAL_HEIGHT_TABLE_II_LENGTH_AREA_NUMBER","rule_ref":"Rule 7(2)(ii), Table-II","check_type":"tiered_lookup","quantity_type":"length_area_or_number","applies_to":["mrp","net_quantity"],"lookup_field":"pdp_area_cm2","table":[{"min":0,"max":100,"normal_min_mm":1,"embossed_min_mm":2},{"min":100,"max":500,"normal_min_mm":2,"embossed_min_mm":4},{"min":500,"max":2500,"normal_min_mm":4,"embossed_min_mm":6},{"min":2500,"max":null,"normal_min_mm":6,"embossed_min_mm":6}],"severity":"major","message":"Numeral height for MRP/net quantity does not meet Table-II minimum for the PDP area band."},
+    {"id":"PDP_PLACEMENT","rule_ref":"Rule 8(1)","check_type":"region_membership","message":"One or more mandatory declarations were found outside the calculated Principal Display Panel area.","severity":"major"},
+    {"id":"QUANTITY_FREE_ZONE","rule_ref":"Rule 8(1) proviso","check_type":"free_zone_margin","field":"net_quantity","min_top_bottom_margin_ratio":1.0,"min_left_right_margin_ratio":2.0,"severity":"minor","message":"Area around the net quantity declaration is not sufficiently free of other printed text (needs clear space >=1x height above/below, >=2x height left/right)."},
+    {"id":"MRP_PROMINENCE","rule_ref":"Rule 9(1)(b)","check_type":"relative_font_emphasis","fields":["mrp","net_quantity"],"must_meet_or_exceed_body_ratio":1.0,"must_contrast_with_background":true,"severity":"minor","message":"MRP/net quantity is not printed at least as prominently, and in a contrasting colour, as required."}
+  ],
+  "language_rule": {"id":"LANGUAGE_HINDI_ENGLISH","rule_ref":"Rule 9(4)","check_type":"language_detect","allowed_languages":["hi","en"],"severity":"minor","message":"Declaration text is not in Hindi (Devanagari) or English (a regional language may be added, not substituted)."}
+}
