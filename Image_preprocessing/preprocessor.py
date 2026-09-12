@@ -361,8 +361,8 @@ def normalize_resolution(
     Upscale small images.
 
     Note:
-    If source DPI is unavailable, target_dpi is a processing target,
-    not a measured physical DPI.
+        If source DPI is unavailable, target_dpi is a processing target,
+        not a measured physical DPI.
     """
 
     h, w = image.shape[:2]
