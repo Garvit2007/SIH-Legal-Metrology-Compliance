@@ -1,0 +1,32 @@
+{
+  "passed": 12,
+  "failed": 1,
+  "bugs": [
+    {
+      "severity": "medium",
+      "criterion": "Scan flow supports image/demo entry, processing state, and annotated compliance results",
+      "evidence": "Named browser check scan-results failed twice: after clicking demo-scan-button, data-testid=processing-title was not observable within 5s because the seeded API fallback completed before the processing panel could render. The backend create flow is healthy (test_tscheck_scan_flow.py passed; POST /api/compliance/scans returned 200 with six declarations). This makes the required Extracting declarations... state effectively unobservable to users in the fast seeded-demo path."
+    }
+  ],
+  "action_items": [
+    "Make the processing state observable for a short minimum duration or provide an explicit processing transition before the demo response resolves.",
+    "Authentication is intentionally a DEMO role selector; no real login was tested.",
+    "PDF and DOCX exports are intentionally MOCK downloadable blobs per the prototype specification."
+  ],
+  "retest_needed": true,
+  "checks": [
+    {"criterion":"Role-based prototype workspaces are available for Field Inspector, Compliance Reviewer, and Admin Officer","name":"role-workspaces","lane":"browser","status":"passed","evidence":"Role switcher buttons were visible; selecting Admin showed active-role-label Admin Officer and navigation-users."},
+    {"criterion":"Inspector dashboard surfaces scan CTA, metrics, recent inspections, and priority review items","name":"inspector-dashboard","lane":"browser","status":"passed","evidence":"dashboard-scan-cta, dashboard-metrics, four metric labels, recent-inspections-card, and priority-review-card visible."},
+    {"criterion":"Scan flow supports image/demo entry, processing state, and annotated compliance results","name":"scan-results","lane":"browser","status":"failed","evidence":"Processing title was not observable after demo click on two runs; failure screenshot captured at /root/.emergent/automation_output/20260911_171628_748/scan-results-failure.png. Backend POST scan test passed with six declarations."},
+    {"criterion":"Compliance report can be reviewed, remarked, saved, and exported","name":"compliance-report","lane":"browser","status":"passed","evidence":"Report preview rendered; PATCH response completed; Mock PDF and Mock DOCX download events completed."},
+    {"criterion":"Repository is searchable and opens a scan record","name":"repository-search-open","lane":"browser","status":"passed","evidence":"Repository table rendered, Shakti search applied, and a row opened annotated scan results."},
+    {"criterion":"Reviewer and Admin analytics show compliance trends, violation breakdown, and region workload","name":"analytics-workspace","lane":"browser","status":"passed","evidence":"Trend, violation breakdown, region workload, and action priorities cards/charts visible for Reviewer workspace."},
+    {"criterion":"Rules reference is searchable and Admin user management is available","name":"rules-and-users","lane":"browser","status":"passed","evidence":"Rule cards rendered and Rule 6(1)(e) search filtered results; Users table showed four prototype accounts and Add user."},
+    {"criterion":"Mobile-responsive field workflow remains usable","name":"mobile-field-workflow","lane":"browser","status":"passed","evidence":"At 390px, menu collapsed/toggled, scan upload and results cards rendered, and document scrollWidth stayed at or below 390px."},
+    {"criterion":"Scan API creates six declaration findings and supports review save","name":"test_tscheck_scan_flow.py","lane":"backend","status":"passed","evidence":"pytest HTTP assertions passed: POST /api/compliance/scans 200; PATCH /api/compliance/scans/{id} 200; six declarations and saved remark verified."},
+    {"criterion":"Repository API lists and opens a scan record with not-found handling","name":"test_tscheck_repository.py","lane":"backend","status":"passed","evidence":"pytest HTTP assertions passed: GET /api/compliance/scans 200; GET /api/compliance/scans/{id} 200; missing id 404."},
+    {"criterion":"Dashboard API supports analytics data","name":"test_tscheck_analytics.py","lane":"backend","status":"passed","evidence":"pytest HTTP assertions passed: GET /api/compliance/dashboard 200 with stats, trend, violation_types, and regions."},
+    {"criterion":"Rules API returns six legal metrology rules","name":"test_tscheck_rules.py","lane":"backend","status":"passed","evidence":"pytest HTTP assertion passed: GET /api/compliance/rules 200; six expected rule ids and mandatory flags verified."},
+    {"criterion":"Report review API rejects unknown scan ids","name":"test_tscheck_report.py","lane":"backend","status":"passed","evidence":"pytest HTTP assertion passed: PATCH /api/compliance/scans/tscheck-unknown returned 404."}
+  ]
+}

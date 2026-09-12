@@ -1,0 +1,260 @@
+{
+  "project_name": "Legal Metrology Compliance Checker",
+  "app_context": "Department of Consumer Affairs - Legal Metrology (Packaged Commodities) Rules, 2011 Compliance Enforcement System",
+  "design_archetype": "Swiss & High-Contrast Enforcement (Official, Authoritative, Precision-Driven)",
+  "theme": {
+    "default_mode": "light",
+    "mode_toggle_supported": true,
+    "description": "Clean, authoritative government portal aesthetic. Deep navy primary anchor for official dignity, crisp off-white/slate backgrounds, combined with high-contrast semantic status badges (Emerald Green for Compliant, Crimson Red for Non-Compliant/Violation, Amber Yellow for Review Required)."
+  },
+  "typography": {
+    "font_families": {
+      "headings": "Outfit, sans-serif",
+      "subheadings_labels": "Plus Jakarta Sans, sans-serif",
+      "body": "Plus Jakarta Sans, sans-serif",
+      "data_code_ocr": "JetBrains Mono, monospace"
+    },
+    "font_weights": {
+      "light": 300,
+      "regular": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700,
+      "black": 800
+    },
+    "scale_hierarchy": {
+      "h1_hero": "text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-none",
+      "h2_section": "text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight",
+      "h3_subsection": "text-xl sm:text-2xl font-semibold tracking-tight",
+      "h4_card_header": "text-lg sm:text-xl font-semibold",
+      "body_regular": "text-sm sm:text-base leading-relaxed font-normal",
+      "body_small": "text-xs sm:text-sm leading-normal",
+      "caption_label": "text-xs font-semibold uppercase tracking-wider text-slate-500",
+      "ocr_data_value": "font-mono text-sm tracking-wide"
+    }
+  },
+  "colors": {
+    "primary_brand": {
+      "navy_900": "#0F172A",
+      "navy_800": "#1E293B",
+      "govt_blue": "#1E3A8A",
+      "accent_blue": "#2563EB",
+      "light_blue_bg": "#EFF6FF"
+    },
+    "neutrals": {
+      "slate_50": "#F8FAFC",
+      "slate_100": "#F1F5F9",
+      "slate_200": "#E2E8F0",
+      "slate_300": "#CBD5E1",
+      "slate_400": "#94A3B8",
+      "slate_600": "#475569",
+      "slate_800": "#1E293B",
+      "slate_900": "#0F172A"
+    },
+    "semantic_status": {
+      "compliant_pass": {
+        "text": "#15803D",
+        "bg": "#DCFCE7",
+        "border": "#86EFAC",
+        "icon": "#16A34A"
+      },
+      "non_compliant_fail": {
+        "text": "#B91C1C",
+        "bg": "#FEE2E2",
+        "border": "#FCA5A5",
+        "icon": "#DC2626"
+      },
+      "review_warning": {
+        "text": "#B45309",
+        "bg": "#FEF3C7",
+        "border": "#FDE047",
+        "icon": "#D97706"
+      },
+      "missing_field": {
+        "text": "#991B1B",
+        "bg": "#FFEDD5",
+        "border": "#FDBA74",
+        "icon": "#EA580C"
+      }
+    },
+    "rules": [
+      "Never use pure black #000000; use slate-900 #0F172A.",
+      "Primary brand blue (#1E3A8A) reserved for primary navigation, hero header accents, and main CTAs.",
+      "Backgrounds must be slate-50/100 to reduce glare during field mobile scanning.",
+      "Semantic status badges must strictly maintain WCAG AA contrast (contrast ratio >= 4.5:1)."
+    ]
+  },
+  "visual_enhancers": {
+    "borders": "1px solid #E2E8F0 with subtle inner tint",
+    "shadows": {
+      "card_subtle": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+      "card_hover": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+      "dropdown_modal": "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)"
+    },
+    "glassmorphism": "backdrop-blur-md bg-white/80 border border-slate-200/60",
+    "scan_overlay": "Animated scanning pulse laser beam (#2563EB) across bounding boxes during OCR processing state"
+  },
+  "layout_and_grids": {
+    "container_padding": "px-4 sm:px-6 lg:px-8 py-6",
+    "dashboard_grid": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6",
+    "scan_results_grid": "grid grid-cols-1 lg:grid-cols-12 gap-6",
+    "scan_results_breakdown": {
+      "image_viewer_col": "col-span-12 lg:col-span-7",
+      "declarations_panel_col": "col-span-12 lg:col-span-5"
+    },
+    "repository_table_layout": "Full width card with sticky column header, filter row above, and pagination footer"
+  },
+  "core_screens_blueprint": {
+    "1_login_role_switcher": {
+      "header": "Government of India - Department of Consumer Affairs Emblem & Portal Header",
+      "title": "Legal Metrology Compliance Enforcement Portal",
+      "subtitle": "Packaged Commodities Rules (2011) AI Verification Suite",
+      "components": [
+        "Role Switcher Cards (Field Inspector, Compliance Reviewer, Admin Officer)",
+        "Quick Login simulation with active session badge",
+        "Official credentials demo helper with pre-filled inspector badge IDs"
+      ]
+    },
+    "2_dashboards": {
+      "inspector_view": [
+        "Hero Action Box: 'Scan New Product Label' with Camera & File Upload",
+        "Today's Scans Widget (Pass / Fail / Pending count)",
+        "Quick Inspection Log feed with status filters",
+        "Recent Flagged Violations needing quick remarks"
+      ],
+      "reviewer_admin_view": [
+        "National/Regional Violation Overview Stats (Total Scanned, Non-Compliance % Rate, Notice Issued Count)",
+        "Top Non-Compliant Violation Categories (Font Size, Missing Manufacturer, MRP Tampering, Invalid Date format)",
+        "Interactive Regional Heatmap / State-wise Compliance Map",
+        "Monthly Compliance Trend Charts (Recharts / Shadcn Chart)"
+      ]
+    },
+    "3_scan_upload_flow": {
+      "step_1": "Drag & Drop zone + Direct Camera Capture toggle (front, back, side label close-ups)",
+      "step_2": "Interactive OCR Processing view (Bounding box detection simulation with progress bar: 'Extracting PDP area...', 'Checking font height against Table-I rules...')",
+      "step_3": "Annotated Vision Canvas: High-res packaging image with color-coded interactive bounding boxes (Green/Red/Amber) mapped directly to line-item declarations on hover",
+      "step_4": "Side Panel Details: Line-by-line verification breakdown for Manufacturer Details, Net Quantity, MRP, Mfg Month/Yr, Consumer Care, Font Size compliance"
+    },
+    "4_compliance_report": {
+      "components": [
+        "Official Notice / Inspection Report preview formatted with Govt Header",
+        "Violation Evidence Photos grid with mapped OCR text extraction",
+        "Inspector Remarks & Manual Override toggles (e.g. approve marginal font size with custom note)",
+        "Action Buttons: 'Download Mock PDF Report', 'Download Mock DOCX Report', 'Escalate to Legal Action'"
+      ]
+    },
+    "5_product_repository": {
+      "components": [
+        "Filter bar: Date range, Compliance Status (All/Pass/Fail/Review), Product Category, Inspector ID, Region",
+        "Search input: Barcode / Commodity Name / Manufacturer / Batch No",
+        "Data Table with detailed drawer modal for instant inspection review"
+      ]
+    },
+    "6_violation_analytics": {
+      "components": [
+        "Violation Distribution Bar Chart",
+        "Manufacturer Penalty & Non-compliance Leaderboard",
+        "Rule-Wise Failure Breakdown (Font Height, Unclear Net Qty, Missing Import License)"
+      ]
+    },
+    "7_admin_user_rules_management": {
+      "components": [
+        "User Directory with Role Permissions management",
+        "Legal Metrology (Packaged Commodities) Rules 2011 Editable Database (e.g. Table-I PDP area thresholds, min font size in mm)"
+      ]
+    }
+  },
+  "legal_metrology_rules_reference_data": [
+    {
+      "declaration_key": "mrp",
+      "title": "Maximum Retail Price (MRP)",
+      "rule_code": "Rule 6(1)(e)",
+      "requirement": "Must be declared as 'MRP Rs. XX.XX (incl. of all taxes)'. Dual MRP or sticker overwriting prohibited except reduction.",
+      "min_font_height_mm": 2.5,
+      "mandatory": true
+    },
+    {
+      "declaration_key": "net_quantity",
+      "title": "Net Quantity",
+      "rule_code": "Rule 6(1)(c)",
+      "requirement": "Declared in standard units (g, kg, ml, L, N). Must appear on Principal Display Panel with contrasting background.",
+      "min_font_height_mm": 2.5,
+      "mandatory": true
+    },
+    {
+      "declaration_key": "manufacturer_details",
+      "title": "Manufacturer / Packer / Importer Name & Address",
+      "rule_code": "Rule 6(1)(a)",
+      "requirement": "Complete name and office address with pin code. Importer address required for imported goods.",
+      "min_font_height_mm": 1.5,
+      "mandatory": true
+    },
+    {
+      "declaration_key": "date_mfg",
+      "title": "Month & Year of Manufacture / Packing",
+      "rule_code": "Rule 6(1)(d)",
+      "requirement": "Declared as 'Mfg Date: MM/YYYY' or 'Packed on: MM/YYYY'.",
+      "min_font_height_mm": 1.5,
+      "mandatory": true
+    },
+    {
+      "declaration_key": "consumer_care",
+      "title": "Consumer Care Details",
+      "rule_code": "Rule 6(2)",
+      "requirement": "Must include name, address, telephone number, and email address of person/office to contact in case of complaint.",
+      "min_font_height_mm": 1.0,
+      "mandatory": true
+    },
+    {
+      "declaration_key": "font_size_pdp",
+      "title": "Font Height & Legibility (Table-I)",
+      "rule_code": "Rule 7 & Table-I",
+      "requirement": "Height of numerals/letters >= 1.0mm to 6.0mm depending on PDP surface area (A). Blown/molded letters require 2.0mm min.",
+      "min_font_height_mm": 1.5,
+      "mandatory": true
+    }
+  ],
+  "image_urls": [
+    {
+      "category": "product_scans",
+      "url": "https://images.unsplash.com/photo-1618381297523-e6c0ab13a5b2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzZ8MHwxfHNlYXJjaHw0fHxwYWNrYWdlZCUyMGZvb2QlMjBwcm9kdWN0JTIwbGFiZWwlMjBib3glMjBwYWNrYWdpbmclMjByZXRhaWx8ZW58MHx8fHwxNzg5MTQ2MTAxfDA&ixlib=rb-4.1.0&q=85",
+      "description": "Packaged commodity box label for OCR compliance scan demonstration"
+    },
+    {
+      "category": "product_scans",
+      "url": "https://images.unsplash.com/photo-1631010231130-5c7828d9a3a7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzZ8MHwxfHNlYXJjaHwyfHxwYWNrYWdlZCUyMGZvb2QlMjBwcm9kdWN0JTIwbGFiZWwlMjBib3glMjBwYWNrYWdpbmclMjByZXRhaWx8ZW58MHx8fHwxNzg5MTQ2MTAxfDA&ixlib=rb-4.1.0&q=85",
+      "description": "Secondary package product front view for barcode and declaration verification"
+    },
+    {
+      "category": "retail_enforcement",
+      "url": "https://images.unsplash.com/photo-1578916171728-46686eac8d58?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTF8MHwxfHNlYXJjaHwyfHxzdXBlcm1hcmtldCUyMGdyb2NlcnklMjBwcm9kdWN0cyUyMHNoZWx2ZXMlMjBiYXJjb2RlJTIwc2NhbnxlbnwwfHx8fDE3ODkxNDYxMDF8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Supermarket shelf inspection context hero image"
+    },
+    {
+      "category": "retail_enforcement",
+      "url": "https://images.unsplash.com/photo-1670684684445-a4504dca0bbc?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTF8MHwxfHNlYXJjaHwxfHxzdXBlcm1hcmtldCUyMGdyb2NlcnklMjBwcm9kdWN0cyUyMHNoZWx2ZXMlMjBiYXJjb2RlJTIwc2NhbnxlbnwwfHx8fDE3ODkxNDYxMDF8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Retail store product inventory enforcement background"
+    }
+  ],
+  "accessibility_requirements": {
+    "touch_targets": "Minimum 44px by 44px for field mobile usage",
+    "contrast": "Minimum 4.5:1 for standard text, 3:1 for large display titles and badge states",
+    "keyboard_nav": "Full tab ordering across scan overlays, table filters, and modal controls",
+    "data_test_ids": "Mandatory data-testid attributes on all role buttons, upload inputs, scan triggers, filters, and report export links"
+  },
+  "instructions_to_main_agent": [
+    "Build a fully demoable, highly responsive application for the Legal Metrology Compliance Checker.",
+    "Implement the role switcher prominently so hackathon evaluators can easily switch between Field Inspector, Compliance Reviewer, and Admin Officer.",
+    "Provide interactive OCR simulation on uploaded packaging images with visually annotated bounding boxes that highlight compliance pass/fail status.",
+    "Include a functional report generator preview with downloadable mock PDF and DOCX file downloads.",
+    "Ensure all interactive components (buttons, tabs, selects, table rows, file upload triggers) have explicit data-testid attributes.",
+    "Use Lucide React icons for clear official UI cues (ShieldCheck, AlertTriangle, FileText, Camera, Scan, Scale, Users, FileCheck).",
+    "Maintain high contrast and official Indian Government Department of Consumer Affairs styling tones throughout."
+  ],
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": {
+    "testing_requirement": "All interactive and key informational elements MUST include a data-testid attribute to facilitate robust automated testing.",
+    "no_generic_layouts": "Avoid generic centered layouts or unstyled default components. Use official government header banners, subtle depth layers, and high-visibility status tags.",
+    "hover_contrast": "Ensure explicit hover text color specification when background color changes on hover.",
+    "no_emoji_icons": "Use official SVG icons from Lucide React instead of emojis for system status and buttons."
+  }
+}
