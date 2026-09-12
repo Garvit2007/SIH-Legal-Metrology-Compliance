@@ -1,17 +1,23 @@
+import os
+import cv2
 from ocr.ocr_metrix import run_ocr
+
+PROCESSED_DIR = "uploads/processed"
+os.makedirs(PROCESSED_DIR, exist_ok=True)
 
 
 def extract_declarations(image, metadata):
     """
-    Backend adapter for the OCR module.
-
-    image:
-        Path of the uploaded image.
-
-    metadata:
-        Preprocessing metadata.
+    image: numpy array returned by preprocess_image()
+    metadata: dict returned by preprocess_image()
     """
+    filename = f"processed_{os.getpid()}_{id(image)}.png"
+    processed_path = os.path.join(PROCESSED_DIR, filename)
 
-    image_path = image
+    cv2.imwrite(processed_path, image)
 
-    return run_ocr(image_path)
+    result = run_ocr(processed_path)
+
+    os.remove(processed_path)  # cleanup temp file
+
+    return result
