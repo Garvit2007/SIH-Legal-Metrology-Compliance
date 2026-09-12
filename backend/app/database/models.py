@@ -76,7 +76,7 @@ class ComplianceReport(Base):
 
     scan = relationship(
         "Scan",
-        back_popates="report"
+        back_populates="report"
     )
 
     violations = relationship(
