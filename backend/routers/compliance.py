@@ -62,7 +62,7 @@ async def analyze_with_gemini(image_base64: str, mime_type: str) -> dict:
     if not key:
         raise RuntimeError("EMERGENT_LLM_KEY is not configured")
     image = image_base64.split(",", 1)[1] if image_base64.startswith("data:") else image_base64
-    prompt = """You are a Legal Metrology label inspector. Examine the packaged commodity image and return JSON only. Check these six fields against India's Legal Metrology (Packaged Commodities) Rules, 2011: manufacturer_details, net_quantity, mrp, date_mfg, consumer_care, font_size_pdp. Use status compliant, non_compliant, or review. Never invent a detected value; use null when missing. Estimate font size only when visually possible. bbox values are percentages from 0 to 100 with x, y, width, height. Return this exact shape: {\"product_name\": string, \"manufacturer\": string, \"declarations\": [{\"key\": string, \"field_name\": string, \"detected_value\": string|null, \"status\": string, \"rule_code\": string, \"requirement\": string, \"reason\": string, \"font_size_mm\": number|null, \"bbox\": {\"x\": number, \"y\": number, \"width\": number, \"height\": number}}]}."""
+    prompt = """Act only as an OCR and visual extraction layer for a separate Legal Metrology rule engine. Do not make the final legal compliance decision; the backend rule engine is authoritative. Examine the packaged commodity image and return JSON only. Extract these declaration regions: manufacturer_details, net_quantity, mrp, date_mfg, consumer_care, font_size_pdp. Never invent a detected value; use null when missing. Bounding boxes use percentages from 0 to 100. Physical font heights must be null unless a reliable scale/reference is visible. Return this exact shape: {\"product_name\": string, \"manufacturer\": string, \"declarations\": [{\"key\": string, \"field_name\": string, \"detected_value\": string|null, \"status\": \"review\", \"rule_code\": string, \"requirement\": string, \"reason\": \"Awaiting configured rule engine\", \"font_size_mm\": number|null, \"bbox\": {\"x\": number, \"y\": number, \"width\": number, \"height\": number}}], \"rule_input\": {\"manufacturer_address\": string, \"commodity_name\": string, \"net_quantity\": string, \"net_quantity_value_g_ml\": number|null, \"quantity_type\": \"weight_or_volume\"|\"length_area_or_number\", \"mrp\": string, \"mfg_date\": string, \"consumer_care\": string, \"is_imported\": boolean, \"country_of_origin\": string|null, \"buyer_type\": \"retail\", \"category\": string, \"font_heights_mm\": object, \"is_embossed\": boolean, \"letter_width_height_ratios\": object, \"detected_language\": \"en\"|\"hi\"}}. Use the raw printed text for declaration values."""
     chat = LlmChat(api_key=key, session_id=f"scan-{uuid.uuid4()}", system_message="Return concise, valid JSON for the requested label inspection.").with_model("gemini", "gemini-3.1-pro-preview")
     chunks: list[str] = []
     async for event in chat.stream_message(UserMessage(text=prompt, file_contents=[ImageContent(image_base64=image)])):
@@ -147,6 +147,7 @@ async def scan(scan_id: str) -> ScanRecord:
 @router.post("/scans", response_model=ScanRecord)
 async def create_scan(input: ScanCreate) -> ScanRecord:
     declarations: list[DeclarationResult]
+    vision: dict | None = None
     product_name = input.product_name
     manufacturer = "Not confidently detected"
     image_url = input.image_url or DEMO_IMAGE
@@ -162,7 +163,8 @@ async def create_scan(input: ScanCreate) -> ScanRecord:
     except Exception:
         declarations = fallback_declarations()
     scan_id = str(uuid.uuid4())
-    declarations, engine_report = apply_rule_engine(scan_id, product_name, input.category, declarations)
+    extracted_rule_input = vision.get("rule_input") if vision else None
+    declarations, engine_report = apply_rule_engine(scan_id, product_name, input.category, declarations, extracted_rule_input)
     status = "compliant" if engine_report.is_compliant else "non_compliant"
     record = ScanRecord(id=scan_id, product_name=product_name, manufacturer=manufacturer, category=input.category, region=input.region, inspector=input.inspector, status=status, image_url=image_url, declarations=declarations, violation_count=engine_report.total_violations, review_status="pending" if not engine_report.is_compliant else "not_required", rule_engine_report=engine_report)
     await db.scans.insert_one(record.model_dump())

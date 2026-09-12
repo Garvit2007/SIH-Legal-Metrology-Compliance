@@ -1,0 +1,29 @@
+{
+  "passed": 16,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [
+    "Authentication is intentionally a DEMO role selector; no real login was tested.",
+    "PDF and DOCX exports are intentionally MOCK downloadable blobs per the prototype specification.",
+    "Previously-flaky scan-results processing-title timing (iteration_1 medium bug) has now passed consistently across two subsequent iterations (2 and 3); confirmed resolved/flaky, not a recurring bug."
+  ],
+  "retest_needed": false,
+  "checks": [
+    {"criterion":"Seeded demo scan exposes the processing transition before results","name":"scan-results","lane":"browser","status":"passed","evidence":"Rerun by name: processing-title 'Extracting declarations...' observed after demo-scan-button click, then scan-results-panel, annotated-image-card, and six declaration-card-* elements rendered."},
+    {"criterion":"Post-scan compliance verdicts come from the supplied LMPC rule engine","name":"scan-rule-engine-verdicts","lane":"browser","status":"passed","evidence":"Rerun by name: declaration-card-font_size_pdp shows Violation status with a 'Rule engine' reason citing Table-I threshold; declaration-report-button opens report-preview-card which also contains 'Rule engine' text."},
+    {"criterion":"Post-scan compliance verdicts come from the supplied LMPC rule engine","name":"test_tscheck_rule_engine_report.py","lane":"backend","status":"passed","evidence":"pytest: POST /api/compliance/scans 200; rule_engine_report.rule_version=='2017-amendment'; font_size_pdp declaration status non_compliant with reason starting 'Rule engine'; mrp declaration reason starting 'Rule engine passed'; violation rule_id contains HEIGHT_TABLE_I."},
+    {"criterion":"Post-scan compliance verdicts come from the supplied LMPC rule engine","name":"test_rule_engine_supplied.py","lane":"backend","status":"passed","evidence":"Unit-level pytest suite for backend/rule_engine.py (24 cases: condition eval, scope/exemption, Table-I boundaries, PDP placement) all passing against the supplied config-driven engine."},
+    {"criterion":"Existing scan-to-report features remain unchanged","name":"role-workspaces","lane":"browser","status":"passed","evidence":"Rerun by name: role switcher buttons visible; Admin workspace showed active-role-label Admin Officer and navigation-users."},
+    {"criterion":"Existing scan-to-report features remain unchanged","name":"inspector-dashboard","lane":"browser","status":"passed","evidence":"Rerun by name: dashboard-scan-cta, dashboard-metrics, recent-inspections-card, priority-review-card visible."},
+    {"criterion":"Existing scan-to-report features remain unchanged","name":"compliance-report","lane":"browser","status":"passed","evidence":"Rerun by name: report-preview-card rendered, remarks PATCH resolved, Mock PDF and Mock DOCX download events completed."},
+    {"criterion":"Existing scan-to-report features remain unchanged","name":"repository-search-open","lane":"browser","status":"passed","evidence":"Rerun by name: repository table rendered, search applied, row opened annotated scan results."},
+    {"criterion":"Existing scan-to-report features remain unchanged","name":"analytics-workspace","lane":"browser","status":"passed","evidence":"Rerun by name: trend, violation breakdown, region workload, and action priority cards visible."},
+    {"criterion":"Existing scan-to-report features remain unchanged","name":"rules-and-users","lane":"browser","status":"passed","evidence":"Rerun by name: rule cards rendered and filtered by search; Users table with Add user visible."},
+    {"criterion":"Existing scan-to-report features remain unchanged","name":"mobile-field-workflow","lane":"browser","status":"passed","evidence":"Rerun by name at 390px: menu collapse/toggle, scan upload and results cards rendered without horizontal overflow."},
+    {"criterion":"Scan API creates six declaration findings and supports review save","name":"test_tscheck_scan_flow.py","lane":"backend","status":"passed","evidence":"pytest: POST /api/compliance/scans 200 with six declarations; PATCH /api/compliance/scans/{id} 200 with saved remark and review_status."},
+    {"criterion":"Repository API lists and opens a scan record with not-found handling","name":"test_tscheck_repository.py","lane":"backend","status":"passed","evidence":"pytest: GET /api/compliance/scans 200; GET /api/compliance/scans/{id} 200; missing id 404."},
+    {"criterion":"Dashboard API supports analytics data","name":"test_tscheck_analytics.py","lane":"backend","status":"passed","evidence":"pytest: GET /api/compliance/dashboard 200 with stats, trend, violation_types, and regions."},
+    {"criterion":"Rules API returns six legal metrology rules","name":"test_tscheck_rules.py","lane":"backend","status":"passed","evidence":"pytest: GET /api/compliance/rules 200; six expected rule ids and mandatory flags verified."},
+    {"criterion":"Report review API rejects unknown scan ids","name":"test_tscheck_report.py","lane":"backend","status":"passed","evidence":"pytest: PATCH /api/compliance/scans/tscheck-unknown returned 404."}
+  ]
+}

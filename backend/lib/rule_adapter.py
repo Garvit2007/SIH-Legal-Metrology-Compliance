@@ -46,6 +46,32 @@ CATEGORY_MAP = {
     "household": "packaged_food",
 }
 
+RULE_INPUT_FIELDS = {
+    "manufacturer_address",
+    "commodity_name",
+    "net_quantity",
+    "net_quantity_value_g_ml",
+    "quantity_type",
+    "mrp",
+    "mfg_date",
+    "consumer_care",
+    "is_imported",
+    "buyer_type",
+    "category",
+    "font_heights_mm",
+    "is_embossed",
+    "letter_width_height_ratios",
+    "detected_language",
+    "country_of_origin",
+    "pdp_area_cm2",
+    "pdp_box",
+    "declaration_boxes",
+    "nearest_other_text_distance_mm",
+    "body_text_height_mm",
+    "contrast_ok",
+    "dimensions",
+}
+
 
 def _value(declarations: dict[str, DeclarationResult], key: str) -> str:
     return str(declarations.get(key).detected_value or "") if declarations.get(key) else ""
@@ -77,7 +103,7 @@ def _normalise_date(raw: str) -> str:
     return re.sub(r"^\s*(packed\s+on|mfg\.?\s*date|manufactured\s+on)\s*[:.-]?\s*", "", raw, flags=re.IGNORECASE).strip()
 
 
-def build_rule_input(product_name: str, category: str, declarations: list[DeclarationResult]) -> dict:
+def build_rule_input(product_name: str, category: str, declarations: list[DeclarationResult], extracted_input: dict | None = None) -> dict:
     by_key = {item.key: item for item in declarations}
     net_quantity, quantity_value, quantity_type = _normalise_net_quantity(_value(by_key, "net_quantity"))
     heights = {item.key: item.font_size_mm for item in declarations if item.font_size_mm is not None}
@@ -90,7 +116,7 @@ def build_rule_input(product_name: str, category: str, declarations: list[Declar
         }
         for item in declarations
     }
-    return {
+    rule_input = {
         "manufacturer_address": _value(by_key, "manufacturer_details"),
         "commodity_name": product_name,
         "net_quantity": net_quantity,
@@ -109,10 +135,13 @@ def build_rule_input(product_name: str, category: str, declarations: list[Declar
         "pdp_box": {"x0": 0, "y0": 0, "x1": 100, "y1": 100},
         "declaration_boxes": boxes,
     }
+    if extracted_input:
+        rule_input.update({key: value for key, value in extracted_input.items() if key in RULE_INPUT_FIELDS and value is not None})
+    return rule_input
 
 
-def apply_rule_engine(product_id: str, product_name: str, category: str, declarations: list[DeclarationResult]) -> tuple[list[DeclarationResult], RuleEngineReport]:
-    engine_report = ENGINE.evaluate(product_id, build_rule_input(product_name, category, declarations))
+def apply_rule_engine(product_id: str, product_name: str, category: str, declarations: list[DeclarationResult], extracted_input: dict | None = None) -> tuple[list[DeclarationResult], RuleEngineReport]:
+    engine_report = ENGINE.evaluate(product_id, build_rule_input(product_name, category, declarations, extracted_input))
     raw_report = engine_report.to_dict()
     summary = RuleEngineReport(rule_version=RULE_VERSION, **raw_report)
     if summary.out_of_scope or summary.exempt:
