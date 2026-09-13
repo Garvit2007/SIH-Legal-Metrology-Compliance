@@ -11,6 +11,8 @@ from typing import List
 import uuid
 from datetime import datetime
 from routers.compliance import router as compliance_router
+from routers.auth import router as auth_router
+from lib.auth import ensure_default_users
 
 
 ROOT_DIR = Path(__file__).parent
@@ -24,6 +26,7 @@ from lib.db import client, db, ensure_indexes
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.index_task = asyncio.create_task(ensure_indexes())  # background: a big index build must not block boot
+    await ensure_default_users()
     yield
     client.close()
 
@@ -33,6 +36,7 @@ app = FastAPI(lifespan=lifespan)
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
+api_router.include_router(auth_router)
 api_router.include_router(compliance_router)
 
 

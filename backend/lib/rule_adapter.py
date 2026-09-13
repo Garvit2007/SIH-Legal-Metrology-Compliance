@@ -167,10 +167,21 @@ def apply_rule_engine(product_id: str, product_name: str, category: str, declara
         violations = violations_by_key.get(item.key, [])
         if violations:
             references = " / ".join(dict.fromkeys(violation.rule_ref for violation in violations if violation.rule_ref))
-            reason = "Rule engine: " + "; ".join(violation.message for violation in violations)
-            evaluated.append(item.model_copy(update={"status": "non_compliant", "reason": reason, "rule_code": references or item.rule_code}))
+            if not item.detected_value:
+                status = "not_detected"
+                reason = "Not detected across the uploaded package faces. Manual verification is required before confirming a violation."
+            elif item.confidence == "low":
+                status = "manual_review"
+                reason = "Manual verification recommended. The extraction confidence is low; the configured rule engine result is not treated as a confirmed violation."
+            else:
+                status = "non_compliant"
+                reason = "Rule engine: " + "; ".join(violation.message for violation in violations)
+            evaluated.append(item.model_copy(update={"status": status, "reason": reason, "rule_code": references or item.rule_code}))
         else:
             passed = checked_by_key.get(item.key, [])
-            reason = f"Rule engine passed: {', '.join(passed)}." if passed else "No violation returned by the configured rule engine."
-            evaluated.append(item.model_copy(update={"status": "compliant", "reason": reason}))
+            if item.confidence == "low":
+                evaluated.append(item.model_copy(update={"status": "manual_review", "reason": "Manual verification recommended because the extracted value has low confidence."}))
+            else:
+                reason = f"Rule engine passed: {', '.join(passed)}." if passed else "No violation returned by the configured rule engine."
+                evaluated.append(item.model_copy(update={"status": "compliant", "reason": reason}))
     return evaluated, summary

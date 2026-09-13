@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircle,
   ArrowLeft,
@@ -20,6 +20,7 @@ import {
   Flag,
   LayoutDashboard,
   ListFilter,
+  LogOut,
   MapPin,
   Menu,
   Search,
@@ -36,8 +37,10 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import InspectionWorkspace from "@/components/inspection-workspace";
 import { Input } from "@/components/ui/input";
-import { apiGet, apiPatch, apiPost } from "@/lib/api";
+import { apiGet } from "@/lib/api";
+import { endSession } from "@/lib/session";
 import {
   Bar,
   BarChart,
@@ -52,66 +55,46 @@ import {
   XAxis,
   YAxis,
 } from "@/lib/recharts";
-import type { ComplianceStatus, DashboardResponse, DeclarationResult, RuleItem, ScanRecord } from "@/lib/types";
+import type { DashboardResponse, DeclarationResult, RuleItem, ScanRecord, User, UserRole } from "@/lib/types";
 
-type Role = "inspector" | "reviewer" | "admin";
-type View = "dashboard" | "scan" | "repository" | "analytics" | "rules" | "users";
+type Role = UserRole;
+type View = "dashboard" | "scan" | "repository" | "analytics" | "rules" | "users" | "violations" | "reports" | "review";
 type ScanStep = "idle" | "processing" | "results" | "report";
 
-const DEMO_IMAGE = "https://images.unsplash.com/photo-1618381297523-e6c0ab13a5b2?auto=format&fit=crop&w=1400&q=85";
-
-const roleMeta: Record<Role, { label: string; short: string; name: string; color: string }> = {
-  inspector: { label: "Field Inspector", short: "INS", name: "Aditi Rao", color: "bg-blue-600" },
-  reviewer: { label: "Compliance Reviewer", short: "REV", name: "Vivek Sharma", color: "bg-amber-600" },
-  admin: { label: "Admin Officer", short: "ADM", name: "Meera Nair", color: "bg-slate-700" },
+const roleMeta: Record<Role, { label: string; short: string; color: string }> = {
+  inspector: { label: "Inspector Workspace", short: "INS", color: "bg-blue-600" },
+  consumer: { label: "Consumer Workspace", short: "CON", color: "bg-emerald-600" },
+  admin: { label: "Admin Workspace", short: "ADM", color: "bg-slate-700" },
 };
 
 const roleNav: Record<Role, { id: View; label: string; icon: typeof LayoutDashboard }[]> = {
   inspector: [
-    { id: "dashboard", label: "Overview", icon: LayoutDashboard },
-    { id: "scan", label: "Scan label", icon: ScanLine },
-    { id: "repository", label: "Inspection log", icon: ClipboardCheck },
-    { id: "rules", label: "Rules reference", icon: BookOpen },
-  ],
-  reviewer: [
-    { id: "dashboard", label: "Overview", icon: LayoutDashboard },
-    { id: "repository", label: "Review queue", icon: ClipboardCheck },
-    { id: "analytics", label: "Analytics", icon: BarChart3 },
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "scan", label: "New Inspection", icon: ScanLine },
+    { id: "repository", label: "Inspection History", icon: ClipboardCheck },
+    { id: "violations", label: "Violations", icon: AlertCircle },
+    { id: "reports", label: "Reports", icon: FileText },
+    { id: "review", label: "Review", icon: FileCheck2 },
     { id: "rules", label: "Rules reference", icon: BookOpen },
   ],
   admin: [
-    { id: "dashboard", label: "Overview", icon: LayoutDashboard },
-    { id: "repository", label: "Repository", icon: ClipboardCheck },
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "scan", label: "New Inspection", icon: ScanLine },
+    { id: "repository", label: "Inspection History", icon: ClipboardCheck },
+    { id: "violations", label: "Violations", icon: AlertCircle },
+    { id: "reports", label: "Reports", icon: FileText },
+    { id: "review", label: "Review", icon: FileCheck2 },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
     { id: "users", label: "Users & roles", icon: Users },
     { id: "rules", label: "Rules database", icon: BookOpen },
   ],
-};
-
-const fallbackDeclarations: DeclarationResult[] = [
-  { key: "manufacturer_details", field_name: "Manufacturer / Packer", detected_value: "Shakti Foods Pvt. Ltd., Okhla Industrial Area, New Delhi 110020", status: "compliant", rule_code: "Rule 6(1)(a)", requirement: "Complete name, address and PIN code", reason: "Complete address detected with PIN code.", font_size_mm: 1.8, bbox: { x: 10, y: 67, width: 73, height: 11 } },
-  { key: "net_quantity", field_name: "Net Quantity", detected_value: "Net Qty. 500 g", status: "compliant", rule_code: "Rule 6(1)(c)", requirement: "Standard unit on the Principal Display Panel", reason: "Standard metric unit detected on the front panel.", font_size_mm: 2.8, bbox: { x: 10, y: 18, width: 25, height: 10 } },
-  { key: "mrp", field_name: "Maximum Retail Price", detected_value: "MRP ₹120.00 (incl. of all taxes)", status: "compliant", rule_code: "Rule 6(1)(e)", requirement: "MRP inclusive of all taxes", reason: "Inclusive tax declaration is present and readable.", font_size_mm: 2.6, bbox: { x: 54, y: 79, width: 35, height: 9 } },
-  { key: "date_mfg", field_name: "Month / Year of Manufacture", detected_value: "Packed on: 05/2024", status: "compliant", rule_code: "Rule 6(1)(d)", requirement: "Month and year in MM/YYYY format", reason: "Valid month/year format detected.", font_size_mm: 1.6, bbox: { x: 10, y: 83, width: 35, height: 8 } },
-  { key: "consumer_care", field_name: "Consumer Care", detected_value: "care@shaktifoods.in · 1800 123 4567", status: "review", rule_code: "Rule 6(2)", requirement: "Name, address, telephone and email", reason: "Email and telephone detected; address line needs visual verification.", font_size_mm: 1.1, bbox: { x: 10, y: 56, width: 78, height: 9 } },
-  { key: "font_size_pdp", field_name: "Font Height / Legibility", detected_value: "1.2 mm estimated", status: "non_compliant", rule_code: "Rule 7 & Table-I", requirement: "Minimum 1.5 mm for this PDP area", reason: "Estimated height is 1.2mm, below the required 1.5mm minimum.", font_size_mm: 1.2, bbox: { x: 10, y: 38, width: 73, height: 12 } },
-];
-
-const fallbackScan: ScanRecord = {
-  id: "demo-local-scan",
-  product_name: "Shakti Premium Atta 5kg",
-  manufacturer: "Shakti Foods Pvt. Ltd.",
-  category: "Staples",
-  region: "Delhi NCR",
-  inspector: "INS-042 · Aditi Rao",
-  status: "non_compliant",
-  scanned_at: "2024-06-20T10:30:00Z",
-  image_url: DEMO_IMAGE,
-  declarations: fallbackDeclarations,
-  violation_count: 1,
-  review_status: "pending",
-  remarks: "Verify the principal display panel font height before notice issue.",
-  rule_engine_report: null,
+  consumer: [
+    { id: "dashboard", label: "Consumer Dashboard", icon: LayoutDashboard },
+    { id: "scan", label: "Scan Product", icon: ScanLine },
+    { id: "repository", label: "My Scans", icon: ClipboardCheck },
+    { id: "violations", label: "Product Violations", icon: AlertCircle },
+    { id: "review", label: "Consumer Review", icon: FileCheck2 },
+  ],
 };
 
 const fallbackDashboard: DashboardResponse = {
@@ -123,21 +106,23 @@ const fallbackDashboard: DashboardResponse = {
 
 const formatDate = (value: string) => new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
 
-function statusMeta(status: ComplianceStatus) {
+function statusMeta(status: string) {
   if (status === "compliant") return { label: "Compliant", icon: CheckCircle2, className: "border-emerald-200 bg-emerald-50 text-emerald-700" };
+  if (status === "partially_compliant") return { label: "Partially compliant", icon: Flag, className: "border-amber-200 bg-amber-50 text-amber-700" };
   if (status === "non_compliant") return { label: "Violation", icon: AlertCircle, className: "border-red-200 bg-red-50 text-red-700" };
-  return { label: "Needs review", icon: Flag, className: "border-amber-200 bg-amber-50 text-amber-700" };
+  if (status === "not_applicable") return { label: "Not applicable", icon: CheckCircle2, className: "border-slate-200 bg-slate-50 text-slate-600" };
+  if (status === "not_detected") return { label: "Not detected", icon: AlertCircle, className: "border-amber-200 bg-amber-50 text-amber-700" };
+  return { label: "Manual review", icon: Flag, className: "border-amber-200 bg-amber-50 text-amber-700" };
 }
 
-function StatusPill({ status }: { status: ComplianceStatus }) {
+function StatusPill({ status }: { status: string }) {
   const meta = statusMeta(status);
   const Icon = meta.icon;
   return <span data-testid={`status-pill-${status}`} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.className}`}><Icon className="size-3.5" />{meta.label}</span>;
 }
 
-export default function Home() {
-  const queryClient = useQueryClient();
-  const [role, setRole] = useState<Role>("inspector");
+export default function Home({ user }: { user: User }) {
+  const role = user.role;
   const [view, setView] = useState<View>("dashboard");
   const [scanStep, setScanStep] = useState<ScanStep>("idle");
   const [activeScan, setActiveScan] = useState<ScanRecord | null>(null);
@@ -149,83 +134,18 @@ export default function Home() {
   const scansQuery = useQuery({ queryKey: ["compliance-scans"], queryFn: () => apiGet<ScanRecord[]>("/compliance/scans"), retry: false });
   const dashboardQuery = useQuery({ queryKey: ["compliance-dashboard"], queryFn: () => apiGet<DashboardResponse>("/compliance/dashboard"), retry: false });
   const rulesQuery = useQuery({ queryKey: ["compliance-rules"], queryFn: () => apiGet<RuleItem[]>("/compliance/rules"), retry: false });
-  const scans = scansQuery.data?.length ? scansQuery.data : [fallbackScan];
+  const scans = scansQuery.data ?? [];
   const dashboard = dashboardQuery.data ?? fallbackDashboard;
   const rules = rulesQuery.data ?? [];
 
-  const scanMutation = useMutation({
-    mutationFn: (payload: { image_base64?: string; mime_type?: string; image_url?: string }) => apiPost<ScanRecord>("/compliance/scans", { ...payload, product_name: "Uploaded packaged commodity", category: "Food & Grocery", region: "Delhi NCR", inspector: "INS-042 · Aditi Rao" }),
-    onSuccess: (scan) => {
-      setActiveScan(scan);
-      setRemarks(scan.remarks);
-      setScanStep("results");
-      void queryClient.invalidateQueries({ queryKey: ["compliance-scans"] });
-      void queryClient.invalidateQueries({ queryKey: ["compliance-dashboard"] });
-      toast.success("Label analysis complete", { description: "Review the highlighted declarations before filing the report." });
-    },
-    onError: () => {
-      setActiveScan(fallbackScan);
-      setRemarks(fallbackScan.remarks);
-      setScanStep("results");
-      toast.warning("Live vision unavailable", { description: "Showing the deterministic demo result so the inspection can continue." });
-    },
-  });
-
-  const reviewMutation = useMutation({
-    mutationFn: (payload: { id: string; remarks: string }) => apiPatch<ScanRecord>(`/compliance/scans/${payload.id}`, { remarks: payload.remarks, review_status: "verified" }),
-    onSuccess: (scan) => {
-      setActiveScan(scan);
-      toast.success("Review saved", { description: "The inspection record is now marked as verified." });
-      void queryClient.invalidateQueries({ queryKey: ["compliance-scans"] });
-      void queryClient.invalidateQueries({ queryKey: ["compliance-dashboard"] });
-    },
-  });
-
   const filteredScans = useMemo(() => scans.filter((scan) => `${scan.product_name} ${scan.manufacturer} ${scan.category} ${scan.region}`.toLowerCase().includes(search.toLowerCase())), [scans, search]);
   const filteredRules = useMemo(() => rules.filter((rule) => `${rule.title} ${rule.rule_code} ${rule.requirement}`.toLowerCase().includes(ruleSearch.toLowerCase())), [rules, ruleSearch]);
-
-  const selectRole = (nextRole: Role) => {
-    setRole(nextRole);
-    setView("dashboard");
-    setMobileNavOpen(false);
-    toast.success(`${roleMeta[nextRole].label} workspace active`, { description: `Prototype session · ${roleMeta[nextRole].name}` });
-  };
 
   const openScan = (scan: ScanRecord) => {
     setActiveScan(scan);
     setRemarks(scan.remarks);
     setScanStep("results");
     setView("scan");
-  };
-
-  const handleFile = (file: File | undefined) => {
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload a PNG, JPEG, or WEBP label image.");
-      return;
-    }
-    setScanStep("processing");
-    const reader = new FileReader();
-    reader.onload = () => window.setTimeout(() => scanMutation.mutate({ image_base64: String(reader.result), mime_type: file.type }), 850);
-    reader.readAsDataURL(file);
-  };
-
-  const startDemoScan = () => {
-    setScanStep("processing");
-    window.setTimeout(() => scanMutation.mutate({ image_url: DEMO_IMAGE }), 850);
-  };
-
-  const downloadReport = (format: "pdf" | "docx") => {
-    if (!activeScan) return;
-    const text = `LEGAL METROLOGY INSPECTION REPORT\n\nProduct: ${activeScan.product_name}\nManufacturer: ${activeScan.manufacturer}\nRegion: ${activeScan.region}\nInspector: ${activeScan.inspector}\nStatus: ${statusMeta(activeScan.status).label}\n\nDECLARATIONS\n${activeScan.declarations.map((item) => `${item.field_name}: ${item.detected_value ?? "Not detected"} — ${statusMeta(item.status).label}. ${item.reason}`).join("\n")}\n\nInspector remarks: ${remarks || "None recorded"}`;
-    const blob = new Blob([text], { type: format === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `legal-metrology-${activeScan.id}.${format}`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-    toast.success(`${format.toUpperCase()} report downloaded`);
   };
 
   const nav = roleNav[role];
@@ -236,7 +156,7 @@ export default function Home() {
       <header data-testid="government-portal-header" className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-md">
         <div className="flex h-12 items-center justify-between bg-[#0f172a] px-4 text-white sm:px-6 lg:px-8">
           <div data-testid="government-banner" className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-slate-200"><ShieldCheck className="size-4 text-blue-300" /> GOVERNMENT OF INDIA <span className="hidden text-slate-500 sm:inline">/</span><span className="hidden font-normal text-slate-400 sm:inline">Department of Consumer Affairs</span></div>
-          <div data-testid="secure-session-indicator" className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-emerald-300"><span className="size-1.5 rounded-full bg-emerald-400" /> Prototype session active</div>
+          <div data-testid="secure-session-indicator" className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-emerald-300"><span className="size-1.5 rounded-full bg-emerald-400" /> Authenticated session</div>
         </div>
         <div className="flex h-[72px] items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
@@ -245,7 +165,8 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
             <button type="button" data-testid="notification-button" className="relative flex size-10 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-900"><Bell className="size-5" /><span className="absolute right-2 top-2 size-1.5 rounded-full bg-red-500" /></button>
-            <div data-testid="active-role-profile" className="hidden items-center gap-3 border-l border-slate-200 pl-4 sm:flex"><div className={`flex size-9 items-center justify-center rounded-lg text-xs font-bold text-white ${activeRole.color}`}>{activeRole.short}</div><div><p data-testid="active-role-name" className="text-sm font-bold text-slate-900">{activeRole.name}</p><p data-testid="active-role-label" className="text-[11px] text-slate-500">{activeRole.label}</p></div></div>
+            <div data-testid="active-role-profile" className="hidden items-center gap-3 border-l border-slate-200 pl-4 sm:flex"><div className={`flex size-9 items-center justify-center rounded-lg text-xs font-bold text-white ${activeRole.color}`}>{activeRole.short}</div><div><p data-testid="active-role-name" className="text-sm font-bold text-slate-900">{user.name}</p><p data-testid="active-role-label" className="text-[11px] text-slate-500">{activeRole.label}</p></div></div>
+            <Button type="button" data-testid="logout-button" variant="ghost" size="icon" onClick={() => void endSession()}><LogOut className="size-4" /></Button>
             <Button type="button" data-testid="mobile-navigation-toggle" variant="outline" size="icon" className="sm:hidden" onClick={() => setMobileNavOpen((open) => !open)}><Menu className="size-4" /></Button>
           </div>
         </div>
@@ -253,15 +174,16 @@ export default function Home() {
 
       <div className="mx-auto flex max-w-[1600px]">
         <aside data-testid="primary-navigation" className={`${mobileNavOpen ? "block" : "hidden"} absolute inset-x-0 top-[132px] z-30 border-b border-slate-200 bg-white p-3 shadow-xl sm:relative sm:top-0 sm:block sm:w-60 sm:shrink-0 sm:border-0 sm:border-r sm:bg-transparent sm:p-4 sm:shadow-none lg:w-64 lg:p-6`}>
-          <div data-testid="role-switcher" className="mb-6 rounded-2xl border border-blue-100 bg-blue-50/70 p-3"><p data-testid="role-switcher-label" className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-blue-900">Demo workspace</p><div className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1 shadow-sm">{(Object.keys(roleMeta) as Role[]).map((item) => <button key={item} type="button" data-testid={`role-switcher-${item}`} onClick={() => selectRole(item)} className={`min-h-11 rounded-lg px-1 text-[10px] font-bold transition-colors ${role === item ? "bg-blue-900 text-white shadow-md" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"}`}>{roleMeta[item].short}<span className="mt-0.5 block font-medium opacity-80">{item === "inspector" ? "Field" : item === "reviewer" ? "Review" : "Admin"}</span></button>)}</div></div>
-          <nav aria-label="Main navigation" className="space-y-1">{nav.map((item) => { const Icon = item.icon; return <button key={item.id} type="button" data-testid={`navigation-${item.id}`} onClick={() => { setView(item.id); setMobileNavOpen(false); }} className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold transition-all ${view === item.id ? "bg-blue-900 text-white shadow-lg shadow-blue-900/15" : "text-slate-600 hover:bg-white hover:text-blue-900 hover:shadow-sm"}`}><Icon className="size-[18px]" />{item.label}{item.id === "repository" && role === "reviewer" ? <span data-testid="pending-review-count" className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">14</span> : null}</button>; })}</nav>
+          <div data-testid="secure-workspace-card" className="mb-6 rounded-2xl border border-blue-100 bg-blue-50/70 p-4"><p data-testid="secure-workspace-label" className="text-[10px] font-bold uppercase tracking-[0.16em] text-blue-900">Secure workspace</p><p data-testid="secure-workspace-name" className="mt-2 text-sm font-bold text-slate-900">{user.name}</p><p data-testid="secure-workspace-meta" className="mt-1 text-[11px] text-slate-500">{activeRole.label} · {user.region}</p></div>
+          <nav aria-label="Main navigation" className="space-y-1">{nav.map((item) => { const Icon = item.icon; return <button key={item.id} type="button" data-testid={`navigation-${item.id}`} onClick={() => { setView(item.id); setMobileNavOpen(false); }} className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold transition-all ${view === item.id ? "bg-blue-900 text-white shadow-lg shadow-blue-900/15" : "text-slate-600 hover:bg-white hover:text-blue-900 hover:shadow-sm"}`}><Icon className="size-[18px]" />{item.label}{item.id === "review" && role === "inspector" ? <span data-testid="pending-review-count" className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">Review</span> : null}</button>; })}</nav>
           <div data-testid="nav-help-card" className="mt-10 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><p data-testid="nav-help-label" className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Need a rule?</p><p data-testid="nav-help-copy" className="mt-2 text-xs leading-relaxed text-slate-600">Search the reference library for declaration requirements and font thresholds.</p><button type="button" data-testid="nav-help-link" onClick={() => setView("rules")} className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-900 hover:text-blue-600">Open rules <ArrowUpRight className="size-3" /></button></div>
         </aside>
 
         <main data-testid="main-content" className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-          {view === "dashboard" && <DashboardView role={role} dashboard={dashboard} scans={scans} onScan={() => { setView("scan"); setScanStep("idle"); }} onOpenScan={openScan} onView={setView} />}
-          {view === "scan" && <ScanView step={scanStep} activeScan={activeScan} remarks={remarks} setRemarks={setRemarks} isProcessing={scanMutation.isPending} onFile={handleFile} onDemo={startDemoScan} onBack={() => { setView("dashboard"); setScanStep("idle"); }} onResults={() => setScanStep("results")} onReport={() => setScanStep("report")} onDownload={downloadReport} onSave={() => activeScan && reviewMutation.mutate({ id: activeScan.id, remarks })} isSaving={reviewMutation.isPending} />}
+          {view === "dashboard" && <DashboardView role={role} dashboard={dashboard} scans={scans} onScan={() => { setActiveScan(null); setView("scan"); setScanStep("idle"); }} onOpenScan={openScan} onView={setView} />}
+          {view === "scan" && <InspectionWorkspace user={user} activeScan={activeScan} onActiveScan={(scan) => { setActiveScan(scan); if (scan) setRemarks(scan.remarks || scan.consumer_review); }} onBack={() => { setView("dashboard"); setActiveScan(null); }} />}
           {view === "repository" && <RepositoryView scans={filteredScans} search={search} setSearch={setSearch} onOpenScan={openScan} role={role} />}
+          {(view === "violations" || view === "reports" || view === "review") && <RepositoryView scans={view === "violations" ? filteredScans.filter((scan) => scan.status !== "compliant") : filteredScans} search={search} setSearch={setSearch} onOpenScan={openScan} role={role} />}
           {view === "analytics" && <AnalyticsView dashboard={dashboard} />}
           {view === "rules" && <RulesView rules={filteredRules} search={ruleSearch} setSearch={setRuleSearch} role={role} />}
           {view === "users" && <UsersView />}
@@ -278,7 +200,7 @@ function PageHeading({ eyebrow, title, description, action }: { eyebrow: string;
 function DashboardView({ role, dashboard, scans, onScan, onOpenScan, onView }: { role: Role; dashboard: DashboardResponse; scans: ScanRecord[]; onScan: () => void; onOpenScan: (scan: ScanRecord) => void; onView: (view: View) => void }) {
   const meta = roleMeta[role];
   return <>
-    <PageHeading eyebrow={`${meta.label} workspace · 20 Jun 2024`} title={role === "inspector" ? "Ready for the next inspection?" : role === "reviewer" ? "Compliance at a glance" : "National enforcement overview"} description={role === "inspector" ? "Capture declarations from the package, verify the evidence, and keep the inspection record audit-ready." : "Monitor label compliance, prioritize flagged inspections, and keep the department’s enforcement picture current."} action={role === "inspector" ? <Button type="button" data-testid="dashboard-scan-cta" size="lg" className="min-h-11 gap-2 bg-blue-900 px-5 hover:bg-blue-800" onClick={onScan}><ScanLine className="size-4" /> Scan new product</Button> : <Button type="button" data-testid="dashboard-repository-cta" variant="outline" size="lg" className="min-h-11 gap-2" onClick={() => onView("repository")}><ClipboardCheck className="size-4" /> Open {role === "admin" ? "repository" : "review queue"}</Button>} />
+    <PageHeading eyebrow={`${meta.label} · Secure account`} title={role === "consumer" ? "Check a product before you buy" : role === "inspector" ? "Ready for the next inspection?" : "National enforcement overview"} description={role === "consumer" ? "Upload every package face to understand the product information, possible violations and what to check before purchase." : role === "inspector" ? "Capture all package faces, verify the evidence, and keep the inspection record audit-ready." : "Monitor label compliance, prioritize flagged inspections, and keep the department’s enforcement picture current."} action={role !== "admin" ? <Button type="button" data-testid="dashboard-scan-cta" size="lg" className="min-h-11 gap-2 bg-blue-900 px-5 hover:bg-blue-800" onClick={onScan}><ScanLine className="size-4" /> {role === "consumer" ? "Scan product" : "New inspection"}</Button> : <Button type="button" data-testid="dashboard-repository-cta" variant="outline" size="lg" className="min-h-11 gap-2" onClick={() => onView("repository")}><ClipboardCheck className="size-4" /> Open repository</Button>} />
     <div data-testid="dashboard-role-callout" className="mb-6 grid overflow-hidden rounded-2xl bg-[#0f172a] text-white shadow-xl shadow-slate-900/10 lg:grid-cols-[1fr_330px]"><div className="relative p-6 sm:p-8"><div className="absolute right-[-30px] top-[-70px] size-64 rounded-full border-[26px] border-blue-400/10" /><div className="relative"><div className="mb-5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-300"><ShieldCheck className="size-4" /> Rules-based vision review</div><h3 data-testid="callout-title" className="max-w-xl font-heading text-2xl font-bold tracking-tight sm:text-3xl">See the evidence before you issue the notice.</h3><p data-testid="callout-description" className="mt-3 max-w-lg text-sm leading-relaxed text-slate-300">Gemini Vision extracts declarations, then maps every finding to its Legal Metrology rule and evidence region.</p><button type="button" data-testid="callout-rules-link" onClick={() => onView("rules")} className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-white hover:text-blue-200">Review the rule library <ChevronRight className="size-4" /></button></div></div><div data-testid="callout-assurance" className="border-t border-white/10 bg-white/[0.04] p-6 lg:border-l lg:border-t-0"><p data-testid="assurance-label" className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Field assurance</p><p data-testid="assurance-value" className="mt-3 font-mono text-3xl font-bold text-emerald-300">98.4%</p><p data-testid="assurance-copy" className="mt-2 text-xs leading-relaxed text-slate-400">of seeded scans have usable declaration evidence attached for reviewer verification.</p><div className="mt-6 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full w-[84%] rounded-full bg-emerald-400" /></div><p data-testid="assurance-footnote" className="mt-2 text-[11px] text-slate-500">Evidence quality · last 30 days</p></div></div>
     <div data-testid="dashboard-metrics" className="mb-7 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4"><MetricCard label="Total scanned" value={String(dashboard.stats.total_scanned)} change="+12.6%" icon={ScanLine} tone="blue" /><MetricCard label="Violation rate" value={`${dashboard.stats.violation_rate}%`} change="-3.2%" icon={AlertCircle} tone="red" /><MetricCard label="Pending reviews" value={String(dashboard.stats.pending_reviews)} change="Needs action" icon={Flag} tone="amber" /><MetricCard label="Reports issued" value={String(dashboard.stats.reports_issued)} change="This quarter" icon={FileCheck2} tone="green" /></div>
     <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]"><Card data-testid="recent-inspections-card" className="border-slate-200 shadow-sm"><CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 pb-4"><div><CardTitle data-testid="recent-inspections-title" className="font-heading text-lg font-bold">Recent inspections</CardTitle><p data-testid="recent-inspections-description" className="mt-1 text-xs text-slate-500">Latest field activity across assigned regions</p></div><button type="button" data-testid="recent-inspections-view-all" onClick={() => onView("repository")} className="text-xs font-bold text-blue-900 hover:text-blue-600">View all</button></CardHeader><CardContent className="p-0">{scans.slice(0, 5).map((scan) => <button key={scan.id} type="button" data-testid={`recent-scan-${scan.id}`} onClick={() => onOpenScan(scan)} className="flex min-h-[72px] w-full items-center gap-3 border-b border-slate-100 px-4 text-left transition-colors last:border-b-0 hover:bg-slate-50 sm:px-6"><div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500"><FileText className="size-4" /></div><div className="min-w-0 flex-1"><p data-testid={`recent-scan-name-${scan.id}`} className="truncate text-sm font-bold text-slate-800">{scan.product_name}</p><p data-testid={`recent-scan-meta-${scan.id}`} className="mt-1 truncate text-xs text-slate-500">{scan.manufacturer} · {scan.region} · {formatDate(scan.scanned_at)}</p></div><StatusPill status={scan.status} /><ChevronRight className="hidden size-4 text-slate-300 sm:block" /></button>)}</CardContent></Card><Card data-testid="priority-review-card" className="border-slate-200 shadow-sm"><CardHeader className="border-b border-slate-100 pb-4"><CardTitle data-testid="priority-review-title" className="font-heading text-lg font-bold">Priority review</CardTitle><p data-testid="priority-review-description" className="mt-1 text-xs text-slate-500">Records that may need an officer decision</p></CardHeader><CardContent className="space-y-3 p-4 sm:p-6">{scans.filter((scan) => scan.status !== "compliant").slice(0, 3).map((scan) => <button key={scan.id} type="button" data-testid={`priority-scan-${scan.id}`} onClick={() => onOpenScan(scan)} className="w-full rounded-xl border border-amber-100 bg-amber-50/60 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-amber-200 hover:shadow-sm"><div className="flex items-start justify-between gap-3"><div><p data-testid={`priority-scan-name-${scan.id}`} className="text-sm font-bold text-slate-800">{scan.product_name}</p><p data-testid={`priority-scan-review-${scan.id}`} className="mt-1 text-xs text-slate-500">{scan.violation_count || 1} finding{scan.violation_count === 1 ? "" : "s"} · {scan.review_status === "verified" ? "Verified" : "Pending review"}</p></div><ArrowUpRight className="size-4 text-amber-700" /></div></button>)}<button type="button" data-testid="priority-review-open-queue" onClick={() => onView("repository")} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 text-xs font-bold text-slate-600 hover:border-blue-300 hover:text-blue-900"><ListFilter className="size-4" /> Open review queue</button></CardContent></Card></div>
@@ -324,7 +246,7 @@ function ReportView({ scan, remarks, setRemarks, onBack, onDownload, onSave, isS
 function ReportMeta({ label, value }: { label: string; value: string }) { return <div data-testid={`report-meta-${label.toLowerCase().replaceAll(" ", "-")}`}><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p><p className="mt-1 truncate text-xs font-semibold text-slate-800">{value}</p></div>; }
 
 function RepositoryView({ scans, search, setSearch, onOpenScan, role }: { scans: ScanRecord[]; search: string; setSearch: (value: string) => void; onOpenScan: (scan: ScanRecord) => void; role: Role }) {
-  return <><PageHeading eyebrow={role === "reviewer" ? "Officer review queue" : "Inspection repository"} title={role === "reviewer" ? "Prioritise flagged findings" : "All inspection records"} description="Search product, manufacturer, category, region, or inspector to reopen evidence and review the case history." /><Card data-testid="repository-card" className="border-slate-200 shadow-sm"><CardContent className="p-4 sm:p-6"><div className="mb-5 flex flex-col gap-3 lg:flex-row"><div className="relative flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><Input data-testid="repository-search-input" value={search} onChange={(event) => setSearch(event.target.value)} className="h-11 pl-9" placeholder="Search product, manufacturer, region..." /></div><div className="flex gap-2"><button type="button" data-testid="repository-filter-button" onClick={() => toast.info("More filters are available in the production build")} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-600 hover:border-blue-300 hover:text-blue-900"><Filter className="size-4" /> Filters</button><select data-testid="repository-status-filter" className="min-h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 outline-none focus:border-blue-500"><option>All statuses</option><option>Violations</option><option>Compliant</option><option>Needs review</option></select></div></div><div className="overflow-x-auto"><table data-testid="repository-table" className="w-full min-w-[720px] border-separate border-spacing-0 text-left"><thead><tr className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500"><th data-testid="repository-header-product" className="rounded-l-lg px-3 py-3">Product / manufacturer</th><th data-testid="repository-header-category" className="px-3 py-3">Category</th><th data-testid="repository-header-region" className="px-3 py-3">Region</th><th data-testid="repository-header-date" className="px-3 py-3">Scanned</th><th data-testid="repository-header-status" className="px-3 py-3">Status</th><th data-testid="repository-header-action" className="rounded-r-lg px-3 py-3">Action</th></tr></thead><tbody>{scans.map((scan) => <tr key={scan.id} data-testid={`repository-row-${scan.id}`} className="border-b border-slate-100 text-sm"><td className="border-b border-slate-100 px-3 py-4"><button type="button" data-testid={`repository-open-${scan.id}`} onClick={() => onOpenScan(scan)} className="text-left hover:text-blue-900"><p data-testid={`repository-product-${scan.id}`} className="font-bold text-slate-800">{scan.product_name}</p><p data-testid={`repository-manufacturer-${scan.id}`} className="mt-1 text-xs text-slate-500">{scan.manufacturer}</p></button></td><td data-testid={`repository-category-${scan.id}`} className="border-b border-slate-100 px-3 py-4 text-xs text-slate-600">{scan.category}</td><td data-testid={`repository-region-${scan.id}`} className="border-b border-slate-100 px-3 py-4 text-xs text-slate-600"><span className="inline-flex items-center gap-1"><MapPin className="size-3" />{scan.region}</span></td><td data-testid={`repository-date-${scan.id}`} className="border-b border-slate-100 px-3 py-4 text-xs text-slate-600">{formatDate(scan.scanned_at)}</td><td className="border-b border-slate-100 px-3 py-4"><StatusPill status={scan.status} /></td><td className="border-b border-slate-100 px-3 py-4"><Button type="button" data-testid={`repository-review-${scan.id}`} variant="ghost" size="sm" onClick={() => onOpenScan(scan)}>Review <ChevronRight className="size-3" /></Button></td></tr>)}</tbody></table></div><p data-testid="repository-result-count" className="mt-4 text-xs text-slate-400">Showing {scans.length} records · data refreshes from the enforcement API</p></CardContent></Card></>;
+  return <><PageHeading eyebrow={role === "consumer" ? "Private consumer history" : "Inspection repository"} title={role === "consumer" ? "My product scans" : "Inspection and review records"} description="Search product, manufacturer, category or region to reopen the exact evidence and rule results." /><Card data-testid="repository-card" className="border-slate-200 shadow-sm"><CardContent className="p-4 sm:p-6"><div className="mb-5 flex flex-col gap-3 lg:flex-row"><div className="relative flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><Input data-testid="repository-search-input" value={search} onChange={(event) => setSearch(event.target.value)} className="h-11 pl-9" placeholder="Search product, manufacturer, region..." /></div><div className="flex gap-2"><button type="button" data-testid="repository-filter-button" onClick={() => toast.info("Status filtering is available in the table view")} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-600 hover:border-blue-300 hover:text-blue-900"><Filter className="size-4" /> Filters</button><select data-testid="repository-status-filter" className="min-h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 outline-none focus:border-blue-500"><option>All statuses</option><option>Violations</option><option>Compliant</option><option>Manual review</option></select></div></div><div className="overflow-x-auto"><table data-testid="repository-table" className="w-full min-w-[720px] border-separate border-spacing-0 text-left"><thead><tr className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500"><th data-testid="repository-header-product" className="rounded-l-lg px-3 py-3">Product / manufacturer</th><th data-testid="repository-header-category" className="px-3 py-3">Category</th><th data-testid="repository-header-region" className="px-3 py-3">Region</th><th data-testid="repository-header-date" className="px-3 py-3">Scanned</th><th data-testid="repository-header-status" className="px-3 py-3">Status</th><th data-testid="repository-header-action" className="rounded-r-lg px-3 py-3">Action</th></tr></thead><tbody>{scans.map((scan) => <tr key={scan.id} data-testid={`repository-row-${scan.id}`} className="border-b border-slate-100 text-sm"><td className="border-b border-slate-100 px-3 py-4"><button type="button" data-testid={`repository-open-${scan.id}`} onClick={() => onOpenScan(scan)} className="text-left hover:text-blue-900"><p data-testid={`repository-product-${scan.id}`} className="font-bold text-slate-800">{scan.product_name}</p><p data-testid={`repository-manufacturer-${scan.id}`} className="mt-1 text-xs text-slate-500">{scan.manufacturer}</p></button></td><td data-testid={`repository-category-${scan.id}`} className="border-b border-slate-100 px-3 py-4 text-xs text-slate-600">{scan.category}</td><td data-testid={`repository-region-${scan.id}`} className="border-b border-slate-100 px-3 py-4 text-xs text-slate-600"><span className="inline-flex items-center gap-1"><MapPin className="size-3" />{scan.region}</span></td><td data-testid={`repository-date-${scan.id}`} className="border-b border-slate-100 px-3 py-4 text-xs text-slate-600">{formatDate(scan.scanned_at)}</td><td className="border-b border-slate-100 px-3 py-4"><StatusPill status={scan.status} /></td><td className="border-b border-slate-100 px-3 py-4"><Button type="button" data-testid={`repository-review-${scan.id}`} variant="ghost" size="sm" onClick={() => onOpenScan(scan)}>Open <ChevronRight className="size-3" /></Button></td></tr>)}</tbody></table></div><p data-testid="repository-result-count" className="mt-4 text-xs text-slate-400">Showing {scans.length} access-controlled records</p></CardContent></Card></>;
 }
 
 function AnalyticsView({ dashboard }: { dashboard: DashboardResponse }) {
